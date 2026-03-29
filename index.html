@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en" class="h-full" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Campus Water Demand Analysis</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    * { font-family: 'DM Sans', sans-serif; }
+    .mono { font-family: 'Space Mono', monospace; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.3); } 50% { box-shadow: 0 0 20px 4px rgba(34,197,94,.15); } }
+    @keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .fade-up { animation: fadeUp .6s ease-out both; }
+    .fade-up-1 { animation-delay: .05s; } .fade-up-2 { animation-delay: .1s; } .fade-up-3 { animation-delay: .15s; } .fade-up-4 { animation-delay: .2s; } .fade-up-5 { animation-delay: .25s; } .fade-up-6 { animation-delay: .3s; } .fade-up-7 { animation-delay: .35s; }
+    .pulse-glow { animation: pulseGlow 3s ease-in-out infinite; }
+    .wave-bar { position: relative; overflow: hidden; }
+    .wave-bar::after { content: ''; position: absolute; top: 0; left: 0; width: 200%; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.15) 50%, transparent 100%); animation: waveMove 3s linear infinite; }
+    .sidebar-link { transition: all .2s ease; }
+    .sidebar-link:hover, .sidebar-link.active { background: rgba(34,197,94,.1); }
+    .sidebar-link.active { border-left: 3px solid; }
+    .card-hover { transition: transform .25s ease, box-shadow .25s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+    .tab-btn.active-tab { border-bottom: 2px solid; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(100,100,100,.3); border-radius: 3px; }
+
+    /* Dark mode (toggled in Settings; preference in localStorage) */
+    html[data-theme="dark"] .dm-surface-main { background: #0f172a !important; }
+    html[data-theme="dark"] .dm-surface-header { background: #1e293b !important; border-color: #334155 !important; }
+    html[data-theme="dark"] .dm-surface-content { background: #0f172a !important; }
+    html[data-theme="dark"] #page-title { color: #f8fafc !important; }
+    html[data-theme="dark"] #page-subtitle { color: #94a3b8 !important; }
+    html[data-theme="dark"] .dm-card { background: #1e293b !important; border-color: #334155 !important; }
+    html[data-theme="dark"] .dm-card [style*="color:#0a1a12"] { color: #f1f5f9 !important; }
+    html[data-theme="dark"] .dm-card [style*="color:#6b8f7b"],
+    html[data-theme="dark"] .dm-card [style*="color:#8ba89a"],
+    html[data-theme="dark"] .dm-card [style*="color:#374151"] { color: #94a3b8 !important; }
+    html[data-theme="dark"] .dm-card [style*="color:#166534"] { color: #86efac !important; }
+    html[data-theme="dark"] #prediction-result { background: #14532d !important; border-color: #166534 !important; }
+    html[data-theme="dark"] #prediction-value { color: #f1f5f9 !important; }
+    html[data-theme="dark"] #hdr-bell:hover { background: #334155 !important; }
+    html[data-theme="dark"] #hdr-search { background: #334155 !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+    html[data-theme="dark"] #hdr-search::placeholder { color: #94a3b8; }
+    html[data-theme="dark"] .dm-input, html[data-theme="dark"] .dm-select { background: #334155 !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+    html[data-theme="dark"] .dm-label { color: #cbd5e1 !important; }
+    html[data-theme="dark"] #zones-list { color: #cbd5e1 !important; }
+    html[data-theme="dark"] #zones-list .border-gray-100 { border-color: #334155 !important; }
+    html[data-theme="dark"] .dm-setting-row { background: #334155 !important; }
+  </style>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('aquaInsightTheme') === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+</head>
+<body class="h-full overflow-hidden" style="box-sizing:border-box;">
+  <div id="app-wrapper" class="flex h-full w-full">
+    <aside class="w-64 flex-shrink-0 flex flex-col border-r" style="background:#0a1a12; border-color:#1a3a25;">
+      <div class="p-5 border-b" style="border-color:#1a3a25;">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center pulse-glow" style="background:#166534;">
+            <i data-lucide="droplets" style="width:20px;height:20px;color:#4ade80;"></i>
+          </div>
+          <div>
+            <h1 id="sidebar-title" class="text-sm font-bold leading-tight" style="color:#e2e8f0;">AquaInsight</h1>
+            <p id="sidebar-campus" class="text-xs" style="color:#6b8f7b;">University Campus</p>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 py-3 px-2 space-y-0.5 overflow-auto">
+        <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#4ade80;border-color:#22c55e;" data-page="dashboard"><i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i><span>Dashboard</span></a>
+        <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#8ba89a;" data-page="analysis"><i data-lucide="brain" style="width:18px;height:18px;"></i><span>ML models</span></a>
+        <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#8ba89a;" data-page="zones"><i data-lucide="map-pin" style="width:18px;height:18px;"></i><span>Campus Zones</span></a>
+        <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#8ba89a;" data-page="alerts"><i data-lucide="bell" style="width:18px;height:18px;"></i><span>Alerts</span><span class="ml-auto text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center" style="background:#dc2626;color:#fff;">3</span></a>
+        <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#8ba89a;" data-page="reports"><i data-lucide="file-bar-chart" style="width:18px;height:18px;"></i><span>Reports</span></a>
+        <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-md text-sm" style="color:#8ba89a;" data-page="settings"><i data-lucide="settings" style="width:18px;height:18px;"></i><span>Settings</span></a>
+      </nav>
+      <div class="p-4 mx-3 mb-3 rounded-lg" style="background:linear-gradient(135deg,#052e16,#14532d);">
+        <div class="flex items-center gap-2 mb-2"><i data-lucide="leaf" style="width:16px;height:16px;color:#4ade80;"></i><span class="text-xs font-semibold" style="color:#86efac;">Model fit index</span></div>
+        <div id="sustainability-score" class="text-2xl font-bold mono" style="color:#fff;">—<span class="text-sm" style="color:#4ade80;">/100</span></div>
+        <div class="w-full h-1.5 rounded-full mt-2" style="background:#1a3a25;"><div id="sustainability-bar" class="h-full rounded-full wave-bar" style="width:0%;background:linear-gradient(90deg,#22c55e,#4ade80);"></div></div>
+        <p id="sustainability-caption" class="text-[10px] mt-2 leading-snug" style="color:#6b8f7b;">Start <span class="mono">python app.py</span> to load R² from your trained model.</p>
+      </div>
+    </aside>
+
+    <main class="dm-surface-main flex-1 flex flex-col overflow-hidden" style="background:#f0f5f1;">
+      <header class="dm-surface-header flex items-center justify-between px-6 py-4 border-b" style="background:#fff;border-color:#e2e8e4;">
+        <div>
+          <h2 id="page-title" class="text-xl font-bold" style="color:#0a1a12;">Dashboard</h2>
+          <p id="page-subtitle" class="text-sm mt-0.5" style="color:#6b8f7b;">Machine learning for sustainable campus water management</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input id="hdr-search" type="text" placeholder="Search metrics..." class="pl-9 pr-4 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2" style="background:#f0f5f1;border-color:#d4e4d9;width:220px;" aria-label="Search metrics">
+            <i data-lucide="search" style="width:16px;height:16px;color:#8ba89a;position:absolute;left:10px;top:9px;"></i>
+          </div>
+          <button type="button" id="hdr-bell" class="relative p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Notifications (demo)"><i data-lucide="bell" style="width:20px;height:20px;color:#4b6956;"></i><span class="absolute top-1 right-1 w-2 h-2 rounded-full" style="background:#dc2626;"></span></button>
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-default" style="background:#166534;color:#fff;" title="Profile placeholder">IN</div>
+        </div>
+      </header>
+
+      <div id="content-area" class="dm-surface-content flex-1 overflow-auto p-6">
+        <div id="page-dashboard" class="page-content">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="dm-card card-hover fade-up fade-up-1 rounded-xl p-5 border" style="background:#fff;border-color:#e2e8e4;"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#dbeafe;"><i data-lucide="droplets" style="width:20px;height:20px;color:#2563eb;"></i></div><span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:#dcfce7;color:#166534;">▼ 12%</span></div><p class="text-sm mb-1" style="color:#6b8f7b;">Total Consumption</p><p class="text-2xl font-bold mono" style="color:#0a1a12;">24,580<span class="text-sm font-normal ml-1" style="color:#8ba89a;">m3</span></p><p class="text-xs mt-2" style="color:#8ba89a;">vs 27,932 m3 last month</p></div>
+            <div class="dm-card card-hover fade-up fade-up-2 rounded-xl p-5 border" style="background:#fff;border-color:#e2e8e4;"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#fef3c7;"><i data-lucide="brain" style="width:20px;height:20px;color:#d97706;"></i></div><span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:#fef3c7;color:#92400e;">R² 0.99</span></div><p class="text-sm mb-1" style="color:#6b8f7b;">Model fit (test set)</p><p class="text-2xl font-bold mono" style="color:#0a1a12;">98.5<span class="text-sm font-normal ml-1" style="color:#8ba89a;">%</span></p><p class="text-xs mt-2" style="color:#8ba89a;">Random Forest regressor (scikit-learn), 80/20 split</p></div>
+            <div class="dm-card card-hover fade-up fade-up-3 rounded-xl p-5 border" style="background:#fff;border-color:#e2e8e4;"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#fce7f3;"><i data-lucide="alert-triangle" style="width:20px;height:20px;color:#db2777;"></i></div><span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:#fee2e2;color:#991b1b;">Active</span></div><p class="text-sm mb-1" style="color:#6b8f7b;">Leak Detections</p><p class="text-2xl font-bold mono" style="color:#0a1a12;">3<span class="text-sm font-normal ml-1" style="color:#8ba89a;">zones</span></p><p class="text-xs mt-2" style="color:#8ba89a;">Est. loss: 340 m3/day</p></div>
+            <div class="dm-card card-hover fade-up fade-up-4 rounded-xl p-5 border" style="background:#fff;border-color:#e2e8e4;"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#dcfce7;"><i data-lucide="trending-down" style="width:20px;height:20px;color:#16a34a;"></i></div><span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:#dcfce7;color:#166534;">On Track</span></div><p class="text-sm mb-1" style="color:#6b8f7b;">Water Saved (YTD)</p><p class="text-2xl font-bold mono" style="color:#0a1a12;">18,450<span class="text-sm font-normal ml-1" style="color:#8ba89a;">m3</span></p><p class="text-xs mt-2" style="color:#8ba89a;">INR 2.4L cost saved</p></div>
+          </div>
+
+          <div class="dm-card rounded-xl p-6 border" style="background:#fff;border-color:#e2e8e4;">
+            <h3 class="font-semibold mb-4" style="color:#0a1a12;">Run Demand Prediction</h3>
+            <p class="text-xs mb-4" style="color:#8ba89a;">Calls your trained <span class="mono">RandomForest</span> API when you run <span class="mono">python app.py</span> and open <span class="mono">http://127.0.0.1:5000</span>. <strong>Campus zone</strong> is a trained feature (one-hot from your CSV) and changes the prediction.</p>
+            <form onsubmit="runPrediction(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label for="pred-temp" class="dm-label text-sm font-medium block mb-1" style="color:#374151;">Temperature (C)</label><input id="pred-temp" type="number" value="32" class="dm-input w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2" style="border-color:#d4e4d9;"></div>
+              <div><label for="pred-occupancy" class="dm-label text-sm font-medium block mb-1" style="color:#374151;">Occupancy (%)</label><input id="pred-occupancy" type="number" value="75" class="dm-input w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2" style="border-color:#d4e4d9;"></div>
+              <div><label for="pred-day" class="dm-label text-sm font-medium block mb-1" style="color:#374151;">Day Type</label><select id="pred-day" class="dm-select w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2" style="border-color:#d4e4d9;"><option>Weekday</option><option>Weekend</option><option>Holiday</option><option>Exam Period</option></select></div>
+              <div><label for="pred-campus" class="dm-label text-sm font-medium block mb-1" style="color:#374151;">Campus zone</label><select id="pred-campus" class="dm-select w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2" style="border-color:#d4e4d9;"><option value="">Default (mode from training data)</option></select></div>
+              <div class="md:col-span-2"><button type="submit" id="predict-btn" class="w-full py-2.5 rounded-lg text-sm font-semibold transition" style="background:#22c55e;color:#fff;"><span id="predict-text">Run prediction</span></button></div>
+            </form>
+            <div id="prediction-result" class="hidden mt-4 p-4 rounded-lg" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+              <div class="flex items-center gap-2 mb-2"><i data-lucide="zap" style="width:16px;height:16px;color:#16a34a;"></i><span class="text-sm font-semibold" style="color:#166534;">Prediction Result</span></div>
+              <p id="prediction-value" class="text-3xl font-bold mono" style="color:#0a1a12;"></p>
+              <p id="prediction-detail" class="text-xs mt-1" style="color:#6b8f7b;"></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-analysis" class="page-content hidden"><div class="dm-card rounded-xl p-6 border space-y-4" style="background:#fff;border-color:#e2e8e4;"><h3 class="text-lg font-bold" style="color:#0a1a12;">Demand forecasting </h3><p class="text-sm" style="color:#6b8f7b;">Target: <span class="mono">Total_Demand_Liters</span>. Features include weather, calendar fields, campus zone (one-hot), activity level, and academic period. Numeric columns are scaled with <span class="mono">StandardScaler</span>; categoricals are one-hot encoded (<span class="mono">pandas.get_dummies</span>).</p><p class="text-sm" style="color:#6b8f7b;"><strong style="color:#0a1a12;">Models:</strong> <span class="mono">LinearRegression</span> baseline (test R² ≈ 0.79, RMSE ≈ 343 L) and <span class="mono">RandomForestRegressor</span> (100 trees; test R² ≈ 0.99). Train/test split 80/20, <span class="mono">random_state=42</span>.</p><p class="text-sm" style="color:#6b8f7b;">Live dashboard: <span class="mono">python app.py</span> then <span class="mono">POST /api/predict</span> loads <span class="mono">water_ml/model_artifact.joblib</span>.</p></div></div>
+        <div id="page-zones" class="page-content hidden"><div class="dm-card rounded-xl p-6 border" style="background:#fff;border-color:#e2e8e4;"><h3 class="font-semibold mb-2" style="color:#0a1a12;">Campus Zones</h3><p class="text-sm mb-4" style="color:#8ba89a;">Locations in <span class="mono">Modified_Campus_Water_Full_Feature_Set.csv</span> (loaded from the API).</p><ul id="zones-list" class="space-y-2 text-sm" style="color:#374151;">Loading…</ul></div></div>
+        <div id="page-alerts" class="page-content hidden"><div class="dm-card rounded-xl p-6 border" style="background:#fff;border-color:#e2e8e4;"><h3 class="font-semibold mb-2" style="color:#0a1a12;">Alerts</h3><p class="text-sm mb-4" style="color:#8ba89a;">Sample alerts only (not connected to live sensors).</p><div class="space-y-4"><div class="flex items-start gap-3 p-3 rounded-lg" style="background:#fef2f2;"><p class="text-sm mb-1" style="color:#0a1a12;">Abnormal flow — Zone B3</p><p class="text-xs" style="color:#8ba89a;">Demo · 340% above baseline</p></div><div class="flex items-start gap-3 p-3 rounded-lg" style="background:#fff7ed;"><p class="text-sm mb-1" style="color:#0a1a12;">Heat wave advisory</p><p class="text-xs" style="color:#8ba89a;">Demo · irrigation spike expected</p></div><div class="flex items-start gap-3 p-3 rounded-lg" style="background:#f0fdf4;"><p class="text-sm mb-1" style="color:#0a1a12;">Rainwater tanks at 82%</p><p class="text-xs" style="color:#8ba89a;">Demo · optimal reuse window</p></div></div></div></div>
+        <div id="page-reports" class="page-content hidden"><div class="dm-card rounded-xl p-6 border" style="background:#fff;border-color:#e2e8e4;"><h3 class="font-semibold mb-2" style="color:#0a1a12;">Reports</h3><p class="text-sm mb-4" style="color:#8ba89a;">Placeholder for exported PDFs from your notebook (e.g. plots, metrics).</p><ul class="list-disc list-inside text-sm space-y-2" style="color:#374151;"><li>Train models in Jupyter and export figures as PDF.</li><li>Add download links here when you host real files.</li></ul></div></div>
+        <div id="page-settings" class="page-content hidden"><div class="dm-card rounded-xl p-6 border space-y-6" style="background:#fff;border-color:#e2e8e4;"><h3 class="font-semibold mb-2" style="color:#0a1a12;">Settings</h3><div class="dm-setting-row flex items-center justify-between p-4 rounded-lg gap-4" style="background:#f0f5f1;"><div><p class="text-sm font-medium" style="color:#0a1a12;">Dark mode</p><p class="text-xs mt-0.5" style="color:#8ba89a;">Easier on the eyes in low light. Saved in this browser.</p></div><button type="button" id="dark-mode-toggle" role="switch" aria-checked="false" class="relative w-11 h-6 rounded-full transition-colors flex-shrink-0" style="background:#d4e4d9;"><span id="dark-mode-knob" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" style="transform:translateX(0);"></span></button></div><p class="text-sm" style="color:#8ba89a;">API URL is the same origin as this page when you use <span class="mono">python app.py</span>.</p></div></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const THEME_KEY = 'aquaInsightTheme';
+    const defaultConfig = { primary_action_color: '#22c55e' };
+    const pageNames = { dashboard: 'Dashboard', analysis: 'ML models & pipeline', zones: 'Campus Zones', alerts: 'Alerts', reports: 'Reports', settings: 'Settings' };
+
+    function applyTheme(dark) {
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      try {
+        localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+      } catch (e) { /* ignore */ }
+      const btn = document.getElementById('dark-mode-toggle');
+      const knob = document.getElementById('dark-mode-knob');
+      if (btn && knob) {
+        btn.setAttribute('aria-checked', dark ? 'true' : 'false');
+        knob.style.transform = dark ? 'translateX(20px)' : 'translateX(0)';
+        btn.style.background = dark ? '#22c55e' : '#d4e4d9';
+      }
+    }
+
+    function initTheme() {
+      let dark = false;
+      try {
+        dark = localStorage.getItem(THEME_KEY) === 'dark';
+      } catch (e) { /* ignore */ }
+      applyTheme(dark);
+    }
+
+    document.querySelectorAll('.sidebar-link').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = link.dataset.page;
+        document.querySelectorAll('.sidebar-link').forEach((l) => {
+          l.classList.remove('active');
+          l.style.color = '#8ba89a';
+          l.style.borderColor = 'transparent';
+        });
+        link.classList.add('active');
+        link.style.color = defaultConfig.primary_action_color;
+        link.style.borderColor = defaultConfig.primary_action_color;
+        document.querySelectorAll('.page-content').forEach((p) => p.classList.add('hidden'));
+        const targetPage = document.getElementById('page-' + page);
+        if (targetPage) targetPage.classList.remove('hidden');
+        document.getElementById('page-title').textContent = pageNames[page] || 'Dashboard';
+        if (page === 'zones') loadCampusZones();
+        lucide.createIcons();
+      });
+    });
+
+    const API_BASE = (typeof window !== 'undefined' && window.location.origin && window.location.protocol !== 'file:')
+      ? window.location.origin
+      : 'http://127.0.0.1:5000';
+
+    async function runPrediction(e) {
+      e.preventDefault();
+      const btn = document.getElementById('predict-btn');
+      const text = document.getElementById('predict-text');
+      btn.disabled = true;
+      text.textContent = 'Calling model...';
+
+      const temp = parseFloat(document.getElementById('pred-temp').value) || 30;
+      const occ = parseFloat(document.getElementById('pred-occupancy').value) || 70;
+      const day = document.getElementById('pred-day').value;
+      const campusEl = document.getElementById('pred-campus');
+      const campus = campusEl && campusEl.value ? campusEl.value : null;
+      const result = document.getElementById('prediction-result');
+
+      const payload = { ambient_temp_c: temp, occupancy_pct: occ, day_type: day };
+      if (campus) payload.campus_location = campus;
+
+      try {
+        const res = await fetch(API_BASE + '/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.predicted_demand_liters_per_day != null) {
+          const L = data.predicted_demand_liters_per_day;
+          const m3 = data.predicted_demand_m3_per_day;
+          document.getElementById('prediction-value').textContent = Math.round(L).toLocaleString() + ' L/day';
+          const zoneLabel = data.campus_location_used || campus || '—';
+          document.getElementById('prediction-detail').textContent =
+            `≈ ${m3} m³/day · ${day} · ${temp}°C · ${occ}% · zone: ${zoneLabel}${data.default_campus_used ? ' (default mode)' : ''}`;
+          result.classList.remove('hidden');
+        } else {
+          throw new Error(data.error || ('HTTP ' + res.status));
+        }
+      } catch (err) {
+        let base = 2800;
+        base += (temp - 25) * 45;
+        base *= (occ / 100);
+        if (day === 'Weekend') base *= 0.65;
+        if (day === 'Holiday') base *= 0.4;
+        if (day === 'Exam Period') base *= 1.15;
+        base = Math.max(800, Math.round(base));
+        document.getElementById('prediction-value').textContent = base.toLocaleString() + ' L/day (fallback)';
+        document.getElementById('prediction-detail').textContent =
+          `API unavailable (${err.message}). Offline heuristic only. Start the server: python app.py then open http://127.0.0.1:5000`;
+        result.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        text.textContent = 'Run prediction';
+        lucide.createIcons();
+      }
+    }
+
+    async function refreshSustainabilityIndex() {
+      const scoreEl = document.getElementById('sustainability-score');
+      const barEl = document.getElementById('sustainability-bar');
+      const capEl = document.getElementById('sustainability-caption');
+      try {
+        const res = await fetch(API_BASE + '/api/health');
+        const d = await res.json();
+        if (d.sustainability_index != null) {
+          scoreEl.innerHTML = d.sustainability_index + '<span class="text-sm" style="color:#4ade80;">/100</span>';
+          barEl.style.width = Math.min(100, Math.max(0, d.sustainability_index)) + '%';
+          capEl.textContent = d.sustainability_note || '';
+        } else {
+          scoreEl.innerHTML = '—<span class="text-sm" style="color:#4ade80;">/100</span>';
+          barEl.style.width = '0%';
+          capEl.textContent = d.sustainability_note || 'Train the model first.';
+        }
+      } catch (e) {
+        scoreEl.innerHTML = '—<span class="text-sm" style="color:#4ade80;">/100</span>';
+        barEl.style.width = '0%';
+        capEl.textContent = 'Open http://127.0.0.1:5000 with python app.py running.';
+      }
+      lucide.createIcons();
+    }
+
+    async function populateCampusSelect() {
+      const sel = document.getElementById('pred-campus');
+      if (!sel || sel.dataset.loaded === '1') return;
+      try {
+        const res = await fetch(API_BASE + '/api/campus_zones');
+        const d = await res.json();
+        if (res.ok && d.zones && d.zones.length) {
+          d.zones.forEach((z) => {
+            const opt = document.createElement('option');
+            opt.value = z;
+            opt.textContent = z;
+            sel.appendChild(opt);
+          });
+          sel.dataset.loaded = '1';
+        }
+      } catch (e) { /* keep default option only */ }
+    }
+
+    async function loadCampusZones() {
+      const ul = document.getElementById('zones-list');
+      if (!ul || ul.dataset.loaded === '1') return;
+      try {
+        const res = await fetch(API_BASE + '/api/campus_zones');
+        const d = await res.json();
+        if (res.ok && d.zones && d.zones.length) {
+          ul.innerHTML = d.zones.map((z) => '<li class="flex items-center gap-2 border-b border-gray-100 pb-2"><i data-lucide="map-pin" style="width:14px;height:14px;color:#22c55e;"></i><span>' + z.replace(/</g, '') + '</span></li>').join('');
+          ul.dataset.loaded = '1';
+        } else {
+          ul.textContent = 'No zones (CSV missing or empty).';
+        }
+      } catch (e) {
+        ul.textContent = 'Could not load zones. Is the server running?';
+      }
+      lucide.createIcons();
+    }
+
+    document.getElementById('hdr-bell').addEventListener('click', () => {
+      window.alert('Notifications are demo-only. They are not wired to real flow meters or alerts.');
+    });
+
+    document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') === 'dark';
+      applyTheme(!cur);
+    });
+
+    initTheme();
+    refreshSustainabilityIndex();
+    populateCampusSelect();
+    lucide.createIcons();
+  </script>
+</body>
+</html>
