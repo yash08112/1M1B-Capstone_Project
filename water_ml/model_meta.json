@@ -1,0 +1,7 @@
+{
+  "rmse_test": 90.35993598771728,
+  "r2_test": 0.9851208559284782,
+  "n_features": 26,
+  "default_campus": "Girls_Hostel_B",
+  "artifact": "C:\\Users\\yash0\\OneDrive\\Desktop\\New folder\\Cursor projects\\water_ml\\model_artifact.joblib"
+}
