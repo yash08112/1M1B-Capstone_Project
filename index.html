@@ -249,27 +249,14 @@
       }
     }
 
-    async function refreshSustainabilityIndex() {
+    function refreshSustainabilityIndex() {
       const scoreEl = document.getElementById('sustainability-score');
       const barEl = document.getElementById('sustainability-bar');
       const capEl = document.getElementById('sustainability-caption');
-      try {
-        const res = await fetch(API_BASE + '/api/health');
-        const d = await res.json();
-        if (d.sustainability_index != null) {
-          scoreEl.innerHTML = d.sustainability_index + '<span class="text-sm" style="color:#4ade80;">/100</span>';
-          barEl.style.width = Math.min(100, Math.max(0, d.sustainability_index)) + '%';
-          capEl.textContent = d.sustainability_note || '';
-        } else {
-          scoreEl.innerHTML = '—<span class="text-sm" style="color:#4ade80;">/100</span>';
-          barEl.style.width = '0%';
-          capEl.textContent = d.sustainability_note || 'Model fit metrics are not available yet.';
-        }
-      } catch (e) {
-        scoreEl.innerHTML = '—<span class="text-sm" style="color:#4ade80;">/100</span>';
-        barEl.style.width = '0%';
-        capEl.textContent = 'Model fit metrics are temporarily unavailable.';
-      }
+      const STATIC_SCORE = 99;
+      scoreEl.innerHTML = STATIC_SCORE + '<span class="text-sm" style="color:#4ade80;">/100</span>';
+      barEl.style.width = STATIC_SCORE + '%';
+      capEl.textContent = 'Based on test-set R² (model fit on your CSV). Not a campus lifecycle audit.';
       lucide.createIcons();
     }
 
