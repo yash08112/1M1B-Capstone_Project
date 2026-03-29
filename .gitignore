@@ -1,2 +1,3 @@
 water_ml/model_artifact.joblib
 *.joblib
+water_ml/.training.lock

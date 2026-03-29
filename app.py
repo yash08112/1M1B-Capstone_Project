@@ -12,7 +12,9 @@ Open http://127.0.0.1:5000
 from __future__ import annotations
 
 import json
+import logging
 import os
+import threading
 from pathlib import Path
 
 import joblib
@@ -27,13 +29,56 @@ META_PATH = ROOT / "water_ml" / "model_meta.json"
 CSV_PATH = ROOT / "Modified_Campus_Water_Full_Feature_Set.csv"
 
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
 
 _artifact = None
 _campus_zones_cache: list[str] | None = None
+_win_train_lock = threading.Lock()
+
+
+def _train_if_missing() -> None:
+    """
+    If the joblib artifact is absent but the CSV exists (e.g. Render build
+    skipped training), train once. Uses a file lock on Linux so Gunicorn
+    workers do not train in parallel.
+    """
+    global _artifact
+    if ARTIFACT_PATH.is_file():
+        return
+    if not CSV_PATH.is_file():
+        return
+
+    lock_path = ROOT / "water_ml" / ".training.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        import fcntl  # noqa: PLC0415 — Unix only (Render)
+    except ImportError:
+        fcntl = None  # type: ignore[misc, assignment]
+
+    try:
+        if fcntl is not None:
+            with open(lock_path, "a", encoding="utf-8") as lf:
+                fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+                if not ARTIFACT_PATH.is_file():
+                    from train_and_save_model import main as train_main  # noqa: PLC0415
+
+                    train_main()
+        else:
+            with _win_train_lock:
+                if not ARTIFACT_PATH.is_file():
+                    from train_and_save_model import main as train_main  # noqa: PLC0415
+
+                    train_main()
+    except Exception:
+        logger.exception("Automatic model training failed")
+    finally:
+        _artifact = None
 
 
 def get_artifact():
     global _artifact
+    _train_if_missing()
     if _artifact is None:
         if not ARTIFACT_PATH.is_file():
             return None
@@ -54,7 +99,7 @@ def _sustainability_from_meta(meta: dict) -> tuple[int | None, str]:
     """
     r2 = meta.get("r2_test")
     if r2 is None:
-        return None, "Train the model to compute this index."
+        return None, "Model fit metrics are not available yet."
     try:
         r2 = float(r2)
     except (TypeError, ValueError):
@@ -101,14 +146,7 @@ def predict():
 
     art = get_artifact()
     if art is None:
-        return (
-            jsonify(
-                {
-                    "error": "Model not found. Run: python train_and_save_model.py",
-                }
-            ),
-            503,
-        )
+        return jsonify({"error": "unavailable"}), 503
 
     data = request.get_json(silent=True) or {}
     try:
